@@ -140,7 +140,8 @@ app.patch('/api/admin/agendamentos/:id', authAdmin, async (req, res) => {
     res.json({ mensagem: `Status atualizado para ${status}.`, agendamento: cliente });
 });
 
-app.listen(3000, '127.0.0.1', () => {
-    console.log('💈 DailyCut rodando em http://localhost:3000');
-    console.log('🔐 Painel ADM em http://localhost:3000/admin.html');
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`💈 DailyCut a correr na porta ${PORT}`);
 });
