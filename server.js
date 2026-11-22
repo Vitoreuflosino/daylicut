@@ -23,10 +23,15 @@ const GMAIL_USER = 'vitoreuflosino@gmail.com';
 const GMAIL_APP_PASS = 'vvcn bdzu adzq thra';
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
         user: GMAIL_USER,
         pass: GMAIL_APP_PASS
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000
     }
 });
 
