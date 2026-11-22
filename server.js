@@ -1,7 +1,6 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const nodemailer = require('nodemailer');
 const cors = require('cors');
 
 const app = express();
@@ -10,7 +9,7 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const DB_FILE = path.join(__dirname, 'database.json');
-const ADMIN_PASS = 'dailycut123';
+const ADMIN_PASS = process.env.ADMIN_PASS || 'dailycut123';
 
 if (!fs.existsSync(DB_FILE)) {
     fs.writeFileSync(DB_FILE, JSON.stringify([], null, 2), 'utf-8');
@@ -19,20 +18,8 @@ if (!fs.existsSync(DB_FILE)) {
 const readDB = () => JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
 const writeDB = (data) => fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
 
-const GMAIL_USER = 'vitoreuflosino@gmail.com';
-const GMAIL_APP_PASS = 'vvcn bdzu adzq thra';
-
-const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: {
-        user: GMAIL_USER,
-        pass: GMAIL_APP_PASS
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000
-});
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const MAIL_FROM = process.env.MAIL_FROM || 'DailyCut <onboarding@resend.dev>';
 
 // Apenas 'pendente' e 'confirmado' bloqueiam o horário; 'cancelado', 'concluido' e 'recusado' liberam
 const STATUS_QUE_BLOQUEIAM = ['pendente', 'confirmado'];
@@ -108,14 +95,32 @@ async function enviarEmailStatus(cliente, status) {
         return; // 'concluido' não dispara e-mail
     }
 
+    if (!RESEND_API_KEY) {
+        console.warn('⚠️ RESEND_API_KEY não configurada; e-mail não disparado.');
+        return;
+    }
+
     try {
-        await transporter.sendMail({
-            from: `"DailyCut Barbearia" <${GMAIL_USER}>`,
-            to: cliente.email,
-            subject: assunto,
-            text: texto
+        const resposta = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${RESEND_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                from: MAIL_FROM,
+                to: [cliente.email],
+                subject: assunto,
+                text: texto
+            })
         });
-        console.log(`📧 E-mail (${status}) enviado para ${cliente.email}`);
+
+        const dados = await resposta.json();
+        if (!resposta.ok) {
+            throw new Error(dados.message || `HTTP ${resposta.status}`);
+        }
+
+        console.log(`📧 E-mail (${status}) enviado para ${cliente.email} (id: ${dados.id})`);
     } catch (err) {
         console.error('Erro ao enviar e-mail:', err.message);
     }
