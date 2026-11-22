@@ -1,4 +1,4 @@
-[readme.md.md](https://github.com/user-attachments/files/35235354/readme.md.md)# 💈 DailyCut — Sistema de Agendamento para Barbearia
+💈 DailyCut — Sistema de Agendamento para Barbearia
 
 Sistema web full-stack para agendamento de horários em barbearia, com verificação de disponibilidade em tempo real, painel administrativo protegido por senha e notificações automáticas por e-mail.
 
