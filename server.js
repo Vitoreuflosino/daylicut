@@ -18,8 +18,9 @@ if (!fs.existsSync(DB_FILE)) {
 const readDB = () => JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'));
 const writeDB = (data) => fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const MAIL_FROM = process.env.MAIL_FROM || 'DailyCut <onboarding@resend.dev>';
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL;
+const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || 'DailyCut Barbearia';
 
 // Apenas 'pendente' e 'confirmado' bloqueiam o horário; 'cancelado', 'concluido' e 'recusado' liberam
 const STATUS_QUE_BLOQUEIAM = ['pendente', 'confirmado'];
@@ -95,23 +96,32 @@ async function enviarEmailStatus(cliente, status) {
         return; // 'concluido' não dispara e-mail
     }
 
-    if (!RESEND_API_KEY) {
-        console.warn('⚠️ RESEND_API_KEY não configurada; e-mail não disparado.');
+    if (!BREVO_API_KEY || !BREVO_SENDER_EMAIL) {
+        console.warn('⚠️ BREVO_API_KEY ou BREVO_SENDER_EMAIL não configurados; e-mail não disparado.');
         return;
     }
 
     try {
-        const resposta = await fetch('https://api.resend.com/emails', {
+        const resposta = await fetch('https://api.brevo.com/v3/smtp/email', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${RESEND_API_KEY}`,
-                'Content-Type': 'application/json'
+                'api-key': BREVO_API_KEY,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify({
-                from: MAIL_FROM,
-                to: [cliente.email],
+                sender: {
+                    name: BREVO_SENDER_NAME,
+                    email: BREVO_SENDER_EMAIL
+                },
+                to: [
+                    {
+                        email: cliente.email,
+                        name: cliente.nome
+                    }
+                ],
                 subject: assunto,
-                text: texto
+                textContent: texto
             })
         });
 
@@ -120,7 +130,7 @@ async function enviarEmailStatus(cliente, status) {
             throw new Error(dados.message || `HTTP ${resposta.status}`);
         }
 
-        console.log(`📧 E-mail (${status}) enviado para ${cliente.email} (id: ${dados.id})`);
+        console.log(`📧 E-mail (${status}) enviado para ${cliente.email} via Brevo (messageId: ${dados.messageId})`);
     } catch (err) {
         console.error('Erro ao enviar e-mail:', err.message);
     }
